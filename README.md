@@ -83,17 +83,6 @@ Some features I may add in the future:
 * ☄️ Asteroids
 * 🎨 Improved visuals and UI
 
-## 📁 Project Structure
-
-```text
-2d-solar-system/
-│
-├── main.py
-├── assets/
-│   └── ...
-├── README.md
-└── ...
-```
 
 ## 👨‍💻 About
 
