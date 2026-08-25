@@ -7,12 +7,13 @@ pygame.init()
 
 
 class Planet:
-    def __init__(self, name, color, distance, radius, speed, rotation_speed=0.05):
+    def __init__(self, name, color, distance, radius, speed, fun_fact, rotation_speed=0.05):
         self.name = name
         self.color = color
         self.distance = distance
         self.radius = radius
         self.speed = speed
+        self.fun_fact = fun_fact
         self.angle = 0
         self.x = 0
         self.y = 0
@@ -92,16 +93,43 @@ def build_planets():
     # NOTE: distances/sizes/speeds are chosen to look good on screen,
     # not to match real astronomical scale.
     return [
-        Planet("Mercury", (169, 169, 169), 80, 6, 0.04),
-        Planet("Venus", (230, 200, 140), 115, 9, 0.03),
-        Planet("Earth", (80, 140, 230), 150, 10, 0.025),
-        Planet("Mars", (210, 100, 60), 190, 8, 0.02),
-        Planet("Jupiter", (220, 180, 130), 260, 22, 0.012),
-        Planet("Saturn", (230, 210, 160), 320, 18, 0.009),
-        Planet("Uranus", (150, 220, 220), 370, 14, 0.006),
-        Planet("Neptune", (90, 110, 220), 410, 14, 0.004),
+        Planet("Mercury", (169, 169, 169), 80, 6, 0.04,
+        "Smallest planet; a year here is just 88 Earth days." ),
+        Planet("Venus", (230, 200, 140), 115, 9, 0.03,
+        "Second planet from the Sun; hottest planet in our solar system." ),
+        Planet("Earth", (80, 140, 230), 150, 10, 0.025,
+        "Our home planet; the only known celestial body to harbor life." ),
+        Planet("Mars", (210, 100, 60), 190, 8, 0.02,
+        "The Red Planet; has the largest volcano in the solar system known as \"Olympus Mons\"." ),
+        Planet("Jupiter", (220, 180, 130), 260, 22, 0.012,
+        "Largest planet; has a giant red spot that is a storm." ),
+        Planet("Saturn", (230, 210, 160), 320, 18, 0.009,
+        "Known for its prominent rings; the largest planet with rings." ),
+        Planet("Uranus", (150, 220, 220), 370, 14, 0.006,
+        "The seventh planet from the Sun; rotates on its side." ),
+        Planet("Neptune", (90, 110, 220), 410, 14, 0.004,   
+        "The farthest planet from the Sun; has the strongest winds." ),
     ]
 
+def wrap_text(text, font, max_width):
+    words = text.split(" ")
+    lines = []
+    current_line = ""
+
+    for word in words:
+        test_line = (current_line + " " + word).strip()
+        test_width, _ = font.size(test_line)
+        if test_width <= max_width:
+            current_line = test_line
+        else:
+            if current_line != "":
+                lines.append(current_line)
+            current_line = word
+
+    if current_line != "":
+        lines.append(current_line)
+
+    return lines
 
 def draw_info_panel(screen, planet, font):
     # These values are derived from our own simulation numbers,
@@ -110,7 +138,7 @@ def draw_info_panel(screen, planet, font):
     velocity = planet.distance * planet.speed * FPS  # pixels per second
     relative_size = planet.radius ** 3  # a simple size-based stand-in for "mass"
 
-    lines = [
+    stat_lines = [
         planet.name,
         f"Distance from Sun: {planet.distance} px",
         f"Orbital period: {period_seconds:.1f} sec (sim time)",
@@ -119,17 +147,30 @@ def draw_info_panel(screen, planet, font):
         f"Relative size (radius^3): {relative_size}",
     ]
 
+    MAX_TEXT_WIDTH = 300  # wrap long lines (like fun facts) past this width
+    fact_lines = wrap_text("Fun fact: " + planet.fun_fact, font, MAX_TEXT_WIDTH)
+
+    all_lines = stat_lines + [""] + fact_lines
+
+    # Panel width = widest line we actually have, plus padding (capped by MAX_TEXT_WIDTH)
+    widest_line = 0
+    for line in all_lines:
+        line_width, _ = font.size(line)
+        widest_line = max(widest_line, line_width)
+    panel_width = min(widest_line, MAX_TEXT_WIDTH) + 20
+
+    line_height = 22
+    panel_height = 20 + len(all_lines) * line_height
+
     panel_x = 20
     panel_y = 20
-    panel_width = 280
-    panel_height = 20 + len(lines) * 22
 
     pygame.draw.rect(screen, (30, 30, 30), (panel_x, panel_y, panel_width, panel_height))
     pygame.draw.rect(screen, WHITE, (panel_x, panel_y, panel_width, panel_height), width=1)
 
-    for i, line in enumerate(lines):
+    for i, line in enumerate(all_lines):
         text_surface = font.render(line, True, WHITE)
-        screen.blit(text_surface, (panel_x + 10, panel_y + 10 + i * 22))
+        screen.blit(text_surface, (panel_x + 10, panel_y + 10 + i * line_height))
 
 
 # --- Window setup ---
