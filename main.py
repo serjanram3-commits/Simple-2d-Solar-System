@@ -6,14 +6,6 @@ import random
 pygame.init()
 
 
-def lighten_color(color, amount):
-    r, g, b = color
-    r = min(255, r + amount)
-    g = min(255, g + amount)
-    b = min(255, b + amount)
-    return (r, g, b)
-
-
 class Planet:
     def __init__(self, name, color, distance, radius, speed, rotation_speed=0.05):
         self.name = name
@@ -24,21 +16,23 @@ class Planet:
         self.angle = 0
         self.x = 0
         self.y = 0
- 
+
         self.rotation_speed = rotation_speed
         self.rotation_angle = 0
 
-        # Only used by Earth, but harmless to have on every planet
         self.moon_angle = 0
         self.moon_speed = 0.08
 
-    def update(self, sun_x, sun_y):
-        self.angle += self.speed
+        self.hovered = False
+        self.selected = False
+
+    def update(self, sun_x, sun_y, speed_multiplier):
+        self.angle += self.speed * speed_multiplier
         self.x = sun_x + self.distance * math.cos(self.angle)
         self.y = sun_y + self.distance * math.sin(self.angle)
 
-        self.rotation_angle += self.rotation_speed
-        self.moon_angle += self.moon_speed
+        self.rotation_angle += self.rotation_speed * speed_multiplier
+        self.moon_angle += self.moon_speed * speed_multiplier
 
     def draw(self, screen, sun_x, sun_y, font):
         # orbit line
@@ -46,7 +40,7 @@ class Planet:
 
         px, py = int(self.x), int(self.y)
 
-        # Saturn's rings, squished based on rotation to fake a "tilting" 3D look
+        # Saturn's rings
         if self.name == "Saturn":
             tilt = abs(math.cos(self.rotation_angle))
             ring_height = int(self.radius * 0.5 * tilt) + 4
@@ -57,8 +51,7 @@ class Planet:
         # the planet itself
         pygame.draw.circle(screen, self.color, (px, py), self.radius)
 
-        # Jupiter's Great Red Spot: only visible on the "front" half,
-        # to fake it rotating around behind the planet
+        # Jupiter's Great Red Spot
         if self.name == "Jupiter":
             depth = math.cos(self.rotation_angle)
             if depth > 0:
@@ -67,29 +60,76 @@ class Planet:
                 spot_radius = max(1, int((self.radius // 4) * depth))
                 pygame.draw.circle(screen, (180, 70, 50), (spot_x, spot_y), spot_radius)
 
-        # Earth's land patches: same front/back visibility trick, two patches
-        # at different rotation offsets so they appear at different times
+        # Earth's land patches
         if self.name == "Earth":
             for offset in (0, 2.5):
                 angle = self.rotation_angle + offset
                 depth = math.cos(angle)
                 if depth > 0:
-                    land_x = px + int(self.radius * 0.5 * math.sin(angle))
+                    land_x = px + int(self.radius * 0.85 * math.sin(angle))
                     land_y = py - int(self.radius * 0.2) + int(offset * 4)
-                    land_radius = max(2, int((self.radius // 3) * (0.5 + 0.5 * depth)))
+                    land_radius = max(1, int((self.radius // 3) * depth))
                     pygame.draw.circle(screen, (70, 160, 70), (land_x, land_y), land_radius)
 
-            # Earth's moon, orbiting Earth the same way planets orbit the Sun
+            # Earth's moon
             moon_distance = self.radius + 12
             moon_x = px + moon_distance * math.cos(self.moon_angle)
             moon_y = py + moon_distance * math.sin(self.moon_angle)
             pygame.draw.circle(screen, (200, 200, 200), (int(moon_x), int(moon_y)), 3)
-            moon_label = font.render("Moon", True, WHITE)
-            screen.blit(moon_label, (int(moon_x) + 5, int(moon_y) - 8))
+
+        # hover / selection rings (drawn on top of everything else about the planet)
+        if self.hovered:
+            pygame.draw.circle(screen, WHITE, (px, py), self.radius + 4, width=2)
+        if self.selected:
+            pygame.draw.circle(screen, (255, 215, 0), (px, py), self.radius + 7, width=3)
 
         # the label
         label = font.render(self.name, True, WHITE)
         screen.blit(label, (px + self.radius + 4, py - 8))
+
+
+def build_planets():
+    # NOTE: distances/sizes/speeds are chosen to look good on screen,
+    # not to match real astronomical scale.
+    return [
+        Planet("Mercury", (169, 169, 169), 80, 6, 0.04),
+        Planet("Venus", (230, 200, 140), 115, 9, 0.03),
+        Planet("Earth", (80, 140, 230), 150, 10, 0.025),
+        Planet("Mars", (210, 100, 60), 190, 8, 0.02),
+        Planet("Jupiter", (220, 180, 130), 260, 22, 0.012),
+        Planet("Saturn", (230, 210, 160), 320, 18, 0.009),
+        Planet("Uranus", (150, 220, 220), 370, 14, 0.006),
+        Planet("Neptune", (90, 110, 220), 410, 14, 0.004),
+    ]
+
+
+def draw_info_panel(screen, planet, font):
+    # These values are derived from our own simulation numbers,
+    # not real astronomical data (this sim isn't scientifically accurate).
+    period_seconds = (2 * math.pi / planet.speed) / FPS
+    velocity = planet.distance * planet.speed * FPS  # pixels per second
+    relative_size = planet.radius ** 3  # a simple size-based stand-in for "mass"
+
+    lines = [
+        planet.name,
+        f"Distance from Sun: {planet.distance} px",
+        f"Orbital period: {period_seconds:.1f} sec (sim time)",
+        f"Orbital velocity: {velocity:.1f} px/sec",
+        f"Radius: {planet.radius} px",
+        f"Relative size (radius^3): {relative_size}",
+    ]
+
+    panel_x = 20
+    panel_y = 20
+    panel_width = 280
+    panel_height = 20 + len(lines) * 22
+
+    pygame.draw.rect(screen, (30, 30, 30), (panel_x, panel_y, panel_width, panel_height))
+    pygame.draw.rect(screen, WHITE, (panel_x, panel_y, panel_width, panel_height), width=1)
+
+    for i, line in enumerate(lines):
+        text_surface = font.render(line, True, WHITE)
+        screen.blit(text_surface, (panel_x + 10, panel_y + 10 + i * 22))
 
 
 # --- Window setup ---
@@ -112,16 +152,7 @@ SUN_X = WIDTH // 2
 SUN_Y = HEIGHT // 2
 SUN_RADIUS = 40
 
-planets = [
-    Planet("Mercury", (169, 169, 169), 80, 6, 0.04),
-    Planet("Venus", (230, 200, 140), 115, 9, 0.03),
-    Planet("Earth", (80, 140, 230), 150, 10, 0.025),
-    Planet("Mars", (210, 100, 60), 190, 8, 0.02),
-    Planet("Jupiter", (220, 180, 130), 260, 22, 0.012),
-    Planet("Saturn", (230, 210, 160), 320, 18, 0.009),
-    Planet("Uranus", (150, 220, 220), 370, 14, 0.006),
-    Planet("Neptune", (90, 110, 220), 410, 14, 0.004),
-]
+planets = build_planets()
 
 NUM_STARS = 150
 stars = []
@@ -130,19 +161,58 @@ for i in range(NUM_STARS):
     star_y = random.randint(0, HEIGHT)
     stars.append((star_x, star_y))
 
+# --- Interactivity state ---
+paused = False
+speed_multiplier = 1.0
+selected_planet = None
+
 # --- Main loop ---
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 running = False
+            if event.key == pygame.K_SPACE:
+                paused = not paused
+            if event.key == pygame.K_r:
+                planets = build_planets()
+                paused = False
+                speed_multiplier = 1.0
+                selected_planet = None
+            if event.key == pygame.K_RIGHT:
+                speed_multiplier = min(4.0, speed_multiplier + 0.25)
+            if event.key == pygame.K_LEFT:
+                speed_multiplier = max(0.1, speed_multiplier - 0.25)
 
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # left click
+                clicked_planet = None
+                closest_dist = None
+                for planet in planets:
+                    dist = math.hypot(event.pos[0] - planet.x, event.pos[1] - planet.y)
+                    if dist <= planet.radius + 4:
+                        if closest_dist is None or dist < closest_dist:
+                            closest_dist = dist
+                            clicked_planet = planet
+                selected_planet = clicked_planet  # None if click missed every planet
+
+    # Update
+    if not paused:
+        for planet in planets:
+            planet.update(SUN_X, SUN_Y, speed_multiplier)
+
+    # Hover / selection state (checked every frame, independent of pause)
+    mouse_pos = pygame.mouse.get_pos()
     for planet in planets:
-        planet.update(SUN_X, SUN_Y)
+        dist = math.hypot(mouse_pos[0] - planet.x, mouse_pos[1] - planet.y)
+        planet.hovered = dist <= planet.radius + 4
+        planet.selected = (planet is selected_planet)
 
+    # Draw
     screen.fill(BLACK)
 
     for star in stars:
@@ -152,6 +222,20 @@ while running:
 
     for planet in planets:
         planet.draw(screen, SUN_X, SUN_Y, FONT)
+
+    # Status text (top-right)
+    status_text = f"{'PAUSED' if paused else 'RUNNING'}  |  Speed: {speed_multiplier:.2f}x"
+    status_surface = FONT.render(status_text, True, WHITE)
+    screen.blit(status_surface, (WIDTH - 260, 20))
+
+    # Controls hint (bottom-left)
+    controls_text = "SPACE: Pause   R: Reset   Left/Right: Speed   Click: Select   ESC: Quit"
+    controls_surface = FONT.render(controls_text, True, GRAY)
+    screen.blit(controls_surface, (20, HEIGHT - 30))
+
+    # Info panel for selected planet
+    if selected_planet is not None:
+        draw_info_panel(screen, selected_planet, FONT)
 
     pygame.display.flip()
     clock.tick(FPS)
