@@ -76,6 +76,8 @@ class Planet:
             moon_distance = self.radius + 12
             moon_x = px + moon_distance * math.cos(self.moon_angle)
             moon_y = py + moon_distance * math.sin(self.moon_angle)
+            moon_label = font.render("Moon", True, WHITE)
+            screen.blit(moon_label, (int(moon_x) + 5, int(moon_y) - 10))
             pygame.draw.circle(screen, (200, 200, 200), (int(moon_x), int(moon_y)), 3)
 
         # hover / selection rings (drawn on top of everything else about the planet)
