@@ -134,7 +134,7 @@ def wrap_text(text, font, max_width):
     return lines
 
 def draw_info_panel(screen, planet, font):
-    # These values are derived from our own simulation numbers,
+    # These values are derived from simulation numbers,
     # not real astronomical data (this sim isn't scientifically accurate).
     period_seconds = (2 * math.pi / planet.speed) / FPS
     velocity = planet.distance * planet.speed * FPS  # pixels per second
