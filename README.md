@@ -9,6 +9,13 @@ This project was created as my first personal Python project after completing a 
 * ☀️ Sun and planets displayed in a 2D environment
 * 🪐 Planets orbit around the Sun
 * 🏷️ Planet labels for easier identification
+* 🖱️ Interactive planet selection
+* ✨ Planet highlighting when hovering over them
+* 📊 Planet information panel
+* 💡 Fun facts for each planet
+* ⏯️ Pause and resume the simulation
+* 🔄 Reset the simulation
+* ⏩ Adjustable simulation speed
 * 🎨 Simple visual representation of the Solar System
 * 🖥️ Interactive Pygame window
 * ⚙️ Built entirely with Python and Pygame
@@ -54,6 +61,11 @@ python main.py
 | Key   | Action              |
 | ----- | ------------------- |
 | `ESC` | Exit the simulation |
+| `Space` | Pause/Resume |
+| `R` | Reset the simulation |
+| `→` | Increase Speed |
+| `←` | Reduce Speed |
+| `Left Click` | Selecting a planet |
 
 *More controls will be added as the project develops.*
 
@@ -74,10 +86,7 @@ Through this project, I practiced:
 Some features I may add in the future:
 
 * 🔍 Zoom in / zoom out
-* 🖱️ Mouse interaction
-* ⏩ Adjustable simulation speed
 * 🌍 More accurate orbital movement
-* 📊 Planet information panels
 * ⚙️ Customizable planets and their properties
 * 🌙 Moons
 * ☄️ Asteroids
