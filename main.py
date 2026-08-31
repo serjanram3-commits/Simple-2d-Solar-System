@@ -199,7 +199,7 @@ selected_planet = None
 # --- Main loop ---
 running = True
 while running:
-    for event in pygame.event.get():
+        for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
@@ -219,24 +219,24 @@ while running:
             if event.key == pygame.K_LEFT:
                 speed_multiplier = max(0.1, speed_multiplier - 0.25)
 
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # left click
-                        sun_dist = math.hypot(event.pos[0] - SUN_X, event.pos[1] - SUN_Y)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:
+                sun_dist = math.hypot(event.pos[0] - SUN_X, event.pos[1] - SUN_Y)
 
-                        if sun_dist <= SUN_RADIUS + 4:
-                            sun_selected = True
-                            selected_planet = None
-                        else:
-                            clicked_planet = None
-                            closest_dist = None
-                            for planet in planets:
-                                dist = math.hypot(event.pos[0] - planet.x, event.pos[1] - planet.y)
-                                if dist <= planet.radius + 4:
-                                    if closest_dist is None or dist < closest_dist:
-                                        closest_dist = dist
-                                        clicked_planet = planet
-                            selected_planet = clicked_planet
-                            sun_selected = False
+                if sun_dist <= SUN_RADIUS + 4:
+                    sun_selected = True
+                    selected_planet = None
+                else:
+                    clicked_planet = None
+                    closest_dist = None
+                    for planet in planets:
+                        dist = math.hypot(event.pos[0] - planet.x, event.pos[1] - planet.y)
+                        if dist <= planet.radius + 4:
+                            if closest_dist is None or dist < closest_dist:
+                                closest_dist = dist
+                                clicked_planet = planet
+                    selected_planet = clicked_planet
+                    sun_selected = False
 
     # Update
     if not paused:
