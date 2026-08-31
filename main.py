@@ -92,8 +92,7 @@ class Planet:
 
 
 def build_planets():
-    # NOTE: distances/sizes/speeds are chosen to look good on screen,
-    # not to match real astronomical scale.
+    # NOTE: distances/sizes/speeds are chosen to look good on screen, not to match real astronomical scale.
     return [
         Planet("Mercury", (169, 169, 169), 80, 6, 0.04,
         "Smallest planet; a year here is just 88 Earth days." ),
@@ -133,28 +132,12 @@ def wrap_text(text, font, max_width):
 
     return lines
 
-def draw_info_panel(screen, planet, font):
-    # These values are derived from simulation numbers,
-    # not real astronomical data (this sim isn't scientifically accurate).
-    period_seconds = (2 * math.pi / planet.speed) / FPS
-    velocity = planet.distance * planet.speed * FPS  # pixels per second
-    relative_size = planet.radius ** 3  # a simple size-based stand-in for "mass"
+def draw_info_panel(screen, font, title, stat_lines, fact_text):
+    MAX_TEXT_WIDTH = 300
+    fact_lines = wrap_text("Fun fact: " + fact_text, font, MAX_TEXT_WIDTH)
 
-    stat_lines = [
-        planet.name,
-        f"Distance from Sun: {planet.distance} px",
-        f"Orbital period: {period_seconds:.1f} sec (sim time)",
-        f"Orbital velocity: {velocity:.1f} px/sec",
-        f"Radius: {planet.radius} px",
-        f"Relative size (radius^3): {relative_size}",
-    ]
+    all_lines = [title] + stat_lines + [""] + fact_lines
 
-    MAX_TEXT_WIDTH = 300  # wrap long lines (like fun facts) past this width
-    fact_lines = wrap_text("Fun fact: " + planet.fun_fact, font, MAX_TEXT_WIDTH)
-
-    all_lines = stat_lines + [""] + fact_lines
-
-    # Panel width = widest line we actually have, plus padding (capped by MAX_TEXT_WIDTH)
     widest_line = 0
     for line in all_lines:
         line_width, _ = font.size(line)
@@ -194,6 +177,10 @@ WHITE = (255, 255, 255)
 SUN_X = WIDTH // 2
 SUN_Y = HEIGHT // 2
 SUN_RADIUS = 40
+SUN_FACT = "The Sun contains about 99.8% of the mass in our solar system."
+
+sun_hovered = False
+sun_selected = False
 
 planets = build_planets()
 
@@ -226,22 +213,30 @@ while running:
                 paused = False
                 speed_multiplier = 1.0
                 selected_planet = None
+                sun_selected = False
             if event.key == pygame.K_RIGHT:
                 speed_multiplier = min(4.0, speed_multiplier + 0.25)
             if event.key == pygame.K_LEFT:
                 speed_multiplier = max(0.1, speed_multiplier - 0.25)
 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # left click
-                clicked_planet = None
-                closest_dist = None
-                for planet in planets:
-                    dist = math.hypot(event.pos[0] - planet.x, event.pos[1] - planet.y)
-                    if dist <= planet.radius + 4:
-                        if closest_dist is None or dist < closest_dist:
-                            closest_dist = dist
-                            clicked_planet = planet
-                selected_planet = clicked_planet  # None if click missed every planet
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:  # left click
+                        sun_dist = math.hypot(event.pos[0] - SUN_X, event.pos[1] - SUN_Y)
+
+                        if sun_dist <= SUN_RADIUS + 4:
+                            sun_selected = True
+                            selected_planet = None
+                        else:
+                            clicked_planet = None
+                            closest_dist = None
+                            for planet in planets:
+                                dist = math.hypot(event.pos[0] - planet.x, event.pos[1] - planet.y)
+                                if dist <= planet.radius + 4:
+                                    if closest_dist is None or dist < closest_dist:
+                                        closest_dist = dist
+                                        clicked_planet = planet
+                            selected_planet = clicked_planet
+                            sun_selected = False
 
     # Update
     if not paused:
@@ -255,6 +250,9 @@ while running:
         planet.hovered = dist <= planet.radius + 4
         planet.selected = (planet is selected_planet)
 
+    sun_dist = math.hypot(mouse_pos[0] - SUN_X, mouse_pos[1] - SUN_Y)
+    sun_hovered = sun_dist <= SUN_RADIUS + 4
+
     # Draw
     screen.fill(BLACK)
 
@@ -262,6 +260,10 @@ while running:
         pygame.draw.circle(screen, WHITE, star, 1)
 
     pygame.draw.circle(screen, YELLOW, (SUN_X, SUN_Y), SUN_RADIUS)
+    if sun_hovered:
+        pygame.draw.circle(screen, WHITE, (SUN_X, SUN_Y), SUN_RADIUS + 4, width=2)
+    if sun_selected:
+        pygame.draw.circle(screen, (255, 215, 0), (SUN_X, SUN_Y), SUN_RADIUS + 7, width=3)
 
     for planet in planets:
         planet.draw(screen, SUN_X, SUN_Y, FONT)
@@ -276,9 +278,28 @@ while running:
     controls_surface = FONT.render(controls_text, True, GRAY)
     screen.blit(controls_surface, (20, HEIGHT - 30))
 
-    # Info panel for selected planet
+    
+        # Info panel for whatever is currently selected
     if selected_planet is not None:
-        draw_info_panel(screen, selected_planet, FONT)
+        p = selected_planet
+        period_seconds = (2 * math.pi / p.speed) / FPS
+        velocity = p.distance * p.speed * FPS
+        relative_size = p.radius ** 3
+        stat_lines = [
+            f"Distance from Sun: {p.distance} px",
+            f"Orbital period: {period_seconds:.1f} sec (sim time)",
+            f"Orbital velocity: {velocity:.1f} px/sec",
+            f"Radius: {p.radius} px",
+            f"Relative size (radius^3): {relative_size}",
+        ]
+        draw_info_panel(screen, FONT, p.name, stat_lines, p.fun_fact)
+
+    elif sun_selected:
+        stat_lines = [
+            f"Radius: {SUN_RADIUS} px",
+            "Role: center of the solar system",
+        ]
+        draw_info_panel(screen, FONT, "Sun", stat_lines, SUN_FACT)
 
     pygame.display.flip()
     clock.tick(FPS)
