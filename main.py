@@ -195,6 +195,9 @@ for i in range(NUM_STARS):
 paused = False
 speed_multiplier = 1.0
 selected_planet = None
+solar_flare = SolarFlareEvent(SUN_X, SUN_Y, SUN_RADIUS, WIDTH, HEIGHT)
+max_speed_time = 0.0
+MAX_SPEED_EVENT_DELAY = 10.0
 
 # --- Main loop ---
 running = True
@@ -214,13 +217,17 @@ while running:
                 speed_multiplier = 1.0
                 selected_planet = None
                 sun_selected = False
+                max_speed_time = 0.0
+                solar_flare.reset()
             if event.key == pygame.K_RIGHT:
-                speed_multiplier = min(4.0, speed_multiplier + 0.25)
+                if not solar_flare.active:
+                    speed_multiplier = min(4.0, speed_multiplier + 0.25)
             if event.key == pygame.K_LEFT:
-                speed_multiplier = max(0.1, speed_multiplier - 0.25)
+                if not solar_flare.active:
+                    speed_multiplier = max(0.1, speed_multiplier - 0.25)
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
+            if event.button == 1 and not solar_flare.active:
                 sun_dist = math.hypot(event.pos[0] - SUN_X, event.pos[1] - SUN_Y)
 
                 if sun_dist <= SUN_RADIUS + 4:
@@ -238,10 +245,34 @@ while running:
                     selected_planet = clicked_planet
                     sun_selected = False
 
-    # Update
-    if not paused:
+    # Update.  The clock gives the 4x countdown real seconds, rather than
+    # tying it to a particular frame rate.
+    dt = clock.tick(FPS) / 1000.0
+    if not paused and not solar_flare.active:
         for planet in planets:
             planet.update(SUN_X, SUN_Y, speed_multiplier)
+
+        if speed_multiplier >= 4.0:
+            max_speed_time += dt
+            if max_speed_time >= MAX_SPEED_EVENT_DELAY:
+                bodies = [(planet.x, planet.y, planet.radius, planet.color)
+                          for planet in planets]
+                solar_flare.trigger(bodies)
+                selected_planet = None
+                sun_selected = False
+        else:
+            # The ten seconds must be continuous at 4x speed.
+            max_speed_time = 0.0
+
+    if solar_flare.active:
+        solar_flare.update(dt)
+
+    if solar_flare.completed:
+        # A new solar system appears after the event has burned itself out.
+        planets = build_planets()
+        speed_multiplier = 1.0
+        max_speed_time = 0.0
+        solar_flare.reset()
 
     # Hover / selection state (checked every frame, independent of pause)
     mouse_pos = pygame.mouse.get_pos()
@@ -259,19 +290,26 @@ while running:
     for star in stars:
         pygame.draw.circle(screen, WHITE, star, 1)
 
-    pygame.draw.circle(screen, YELLOW, (SUN_X, SUN_Y), SUN_RADIUS)
-    if sun_hovered:
-        pygame.draw.circle(screen, WHITE, (SUN_X, SUN_Y), SUN_RADIUS + 4, width=2)
-    if sun_selected:
-        pygame.draw.circle(screen, (255, 215, 0), (SUN_X, SUN_Y), SUN_RADIUS + 7, width=3)
+    if not solar_flare.hides_solar_system:
+        pygame.draw.circle(screen, YELLOW, (SUN_X, SUN_Y), SUN_RADIUS)
+        if sun_hovered:
+            pygame.draw.circle(screen, WHITE, (SUN_X, SUN_Y), SUN_RADIUS + 4, width=2)
+        if sun_selected:
+            pygame.draw.circle(screen, (255, 215, 0), (SUN_X, SUN_Y), SUN_RADIUS + 7, width=3)
 
-    for planet in planets:
-        planet.draw(screen, SUN_X, SUN_Y, FONT)
+        for planet in planets:
+            planet.draw(screen, SUN_X, SUN_Y, FONT)
+
+    solar_flare.draw(screen)
 
     # Status text (top-right)
     status_text = f"{'PAUSED' if paused else 'RUNNING'}  |  Speed: {speed_multiplier:.2f}x"
     status_surface = FONT.render(status_text, True, WHITE)
     screen.blit(status_surface, (WIDTH - 260, 20))
+
+    if solar_flare.active:
+        event_label = FONT.render("SOLAR EVENT IN PROGRESS", True, (255, 205, 100))
+        screen.blit(event_label, (WIDTH - 260, 45))
 
     # Controls hint (bottom-left)
     controls_text = "SPACE: Pause   R: Reset   Left/Right: Speed   Click: Select   ESC: Quit"
@@ -280,7 +318,7 @@ while running:
 
     
         # Info panel for whatever is currently selected
-    if selected_planet is not None:
+    if not solar_flare.active and selected_planet is not None:
         p = selected_planet
         period_seconds = (2 * math.pi / p.speed) / FPS
         velocity = p.distance * p.speed * FPS
@@ -294,7 +332,7 @@ while running:
         ]
         draw_info_panel(screen, FONT, p.name, stat_lines, p.fun_fact)
 
-    elif sun_selected:
+    elif not solar_flare.active and sun_selected:
         stat_lines = [
             f"Radius: {SUN_RADIUS} px",
             "Role: center of the solar system",
@@ -302,7 +340,5 @@ while running:
         draw_info_panel(screen, FONT, "Sun", stat_lines, SUN_FACT)
 
     pygame.display.flip()
-    clock.tick(FPS)
-
 pygame.quit()
 sys.exit()
