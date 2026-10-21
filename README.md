@@ -19,7 +19,8 @@ This project was created as my first personal Python project after completing a 
 * 🎨 Simple visual representation of the Solar System
 * 🖥️ Interactive Pygame window
 * ⚙️ Built entirely with Python and Pygame
-
+* ☄️ Solar Flare Event — Trigger a temporary cinematic solar event by keeping the simulation at maximum speed for approximately 10 seconds.
+  
 ## 🛠️ Technologies Used
 
 * **Python**
