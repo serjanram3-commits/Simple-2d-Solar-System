@@ -2,7 +2,7 @@ import pygame
 import sys
 import math
 import random
-
+from solar_flare import SolarFlareEvent
 pygame.init()
 
 
